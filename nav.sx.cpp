@@ -21,20 +21,33 @@ void navSx::on_transfer( const name from, const name to, const asset quantity, c
     // user input validation
     const name contract = get_first_receiver();
     const symbol_code symcode = quantity.symbol.code();
-    check(symcode == symbol_code{"SX"} || symcode == symbol_code{"USDT"}, "only accepts SX or USDT token transfers");
-    check(contract == "token.sx"_n || contract == "tethertether"_n, "only accepts `token.sx` or `tethertether` contracts");
+    check(symcode == symbol_code{"VIGOR"} || symcode == symbol_code{"SX"} || symcode == symbol_code{"USDT"}, "only accepts SX, USDT or VIGOR token transfers");
+    check(contract == "vigortoken11"_n || contract == "token.sx"_n || contract == "tethertether"_n, "only accepts `token.sx`, `tethertether` or `vigortoken11` contracts");
 
     // handle incoming SX
     if ( symcode == symbol_code{"SX"} ) {
         check( contract == "token.sx"_n, "invalid SX token contract" );
-        check( memo == "USDT", "`memo` must be \"USDT\"" );
+        check( memo == "USDT" || memo == "VIGOR", "`memo` must be \"USDT\" or \"VIGOR\"" );
         burn( quantity );
-        const asset out = asset{ quantity.amount, symbol{"USDT", 4}};
-        self_transfer( from, extended_asset{ out, "tethertether"_n }, "nav");
+
+        if ( memo == "USDT" ) {
+            const asset out = asset{ quantity.amount, symbol{"USDT", 4}};
+            self_transfer( from, extended_asset{ out, "tethertether"_n }, "nav");
+        } else if ( memo == "VIGOR" ) {
+            const asset out = asset{ quantity.amount, symbol{"VIGOR", 4}};
+            self_transfer( from, extended_asset{ out, "vigortoken11"_n }, "nav");
+        }
 
     // handle incoming USDT
     } else if ( symcode == symbol_code{"USDT"} ) {
         check( contract == "tethertether"_n, "invalid USDT token contract" );
+        check( memo == "SX", "`memo` must be \"SX\"" );
+        const asset out = asset{ quantity.amount, symbol{"SX", 4}};
+        issue( out );
+        self_transfer( from, extended_asset{ out, "token.sx"_n }, "nav");
+    // handle incoming VIGOR
+    } else if ( symcode == symbol_code{"VIGOR"} ) {
+        check( contract == "vigortoken11"_n, "invalid VIGOR token contract" );
         check( memo == "SX", "`memo` must be \"SX\"" );
         const asset out = asset{ quantity.amount, symbol{"SX", 4}};
         issue( out );
