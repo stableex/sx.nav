@@ -9,6 +9,7 @@ using eosio::name;
 using eosio::asset;
 using eosio::symbol;
 using eosio::string;
+using eosio::check;
 
 using eosio::string;
 
