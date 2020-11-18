@@ -11,15 +11,15 @@ void sx::nav::on_transfer( const name from, const name to, const asset quantity,
     // authenticate incoming `from` account
     require_auth( from );
 
-    // ignore transfers
-    if ( to != get_self() || memo == get_self().to_string() || from == "token.sx"_n || from == "eosio.ram"_n) return;
-
-    // must be *.sx account
-    check( from.suffix() == "sx"_n, "must be *.sx account");
-
     // accepted tokens
     const extended_symbol base = {{"SX", 4}, "token.sx"_n};
     const extended_symbol quote = {{"USDT", 4}, "tethertether"_n};
+
+    // ignore transfers
+    if ( to != get_self() || memo == get_self().to_string() || from == base.contract || from == "eosio.ram"_n) return;
+
+    // must be *.sx account
+    check( from.suffix() == "sx"_n, "must be *.sx account");
 
     // check incoming transfer
     const name contract = get_first_receiver();
