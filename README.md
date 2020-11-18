@@ -4,15 +4,10 @@
 
 ## Quickstart
 
-USDT <=> SX
-
 ```bash
-$ cleos transfer myaccount nav.sx "1.0000 USDT" "SX" --contract tethertether
-$ cleos transfer myaccount nav.sx "1.0000 SX" "USDT" --contract token.sx
-```
+# `issue` USDT => SX @ 1:1 ratio
+$ cleos transfer myaccount nav.sx "1.0000 USDT" "" --contract tethertether
 
-## Build
-
-```
-$ eosio-cpp nav.sx.cpp
+# `redeem` SX => USDT @ 1:1 ratio + 0.1% fee
+$ cleos transfer myaccount nav.sx "1.0000 SX" "" --contract token.sx
 ```
