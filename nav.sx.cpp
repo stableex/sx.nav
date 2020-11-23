@@ -29,11 +29,13 @@ void sx::nav::on_transfer( const name from, const name to, const asset quantity,
     check( pairs.base.get_contract() == contract, "base contract mismatch");
     check( pairs.base.get_symbol() == quantity.symbol, "base symbol mismatch");
 
-    // processing fee
+    // calculate out
     const extended_asset out = sx::nav::get_amount_out( get_self(), quantity );
+    const asset balance = token::get_balance( pairs.quote.get_contract(), get_self(), pairs.quote.get_symbol().code() );
 
     // issue if SX tokens
     if ( pairs.quote.get_contract() == "token.sx"_n ) issue( out, "issue" );
+    else check( balance >= out.quantity, "insufficient quote balance");
 
     // transfer amount to sender
     transfer( get_self(), from, out, "nav" );
