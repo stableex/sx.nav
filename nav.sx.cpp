@@ -11,33 +11,74 @@ void sx::nav::on_transfer( const name from, const name to, const asset quantity,
     // authenticate incoming `from` account
     require_auth( from );
 
-    // accepted tokens
-    const extended_symbol base = {{"SX", 4}, "token.sx"_n};
-    const extended_symbol quote = {{"USDT", 4}, "tethertether"_n};
+    // settings
+    sx::nav::settings _settings( get_self(), get_self().value );
+    sx::nav::pairs _pairs( get_self(), get_self().value );
+    check( _settings.exists(), "contract is under maintenance");
+    auto settings = _settings.get();
+
+    // TEMP
+    check( from.suffix() == "sx"_n || from == "eosnationinc"_n, "account must be *.sx");
 
     // ignore transfers
-    if ( to != get_self() || memo == get_self().to_string() || from == base.contract || from == "eosio.ram"_n) return;
-
-    // must be *.sx account
-    check( from.suffix() == "sx"_n, "must be *.sx account");
+    if ( to != get_self() || memo == get_self().to_string() || from == "eosio.ram"_n) return;
 
     // check incoming transfer
     const name contract = get_first_receiver();
-    const extended_symbol incoming = extended_symbol{quantity.symbol, contract};
-    check( base == incoming || quote == incoming, "only accepts `USDT` or `SX` tokens");
-    check( quantity.amount >= 1000, "minimum transfer amount of 1000");
+    const auto pairs = _pairs.get(quantity.symbol.code().raw(), "base symbol does not exist");
+    check( pairs.base.get_contract() == contract, "base contract mismatch");
+    check( pairs.base.get_symbol() == quantity.symbol, "base symbol mismatch");
 
-    // redeem SX => USDT @ 1:1 ratio + 0.1% fee
-    if ( incoming == base ) {
-        const int64_t fee = quantity.amount * 10 / 10000;
-        retire( { quantity, contract }, "retire" );
-        transfer( get_self(), from, { quantity.amount - fee, quote }, "nav" );
+    // processing fee
+    const int64_t fee = quantity.amount * settings.fee / 10000;
+    const extended_asset out = { quantity.amount - fee, pairs.quote };
 
-    // issue USDT => SX @ 1:1 ratio
+    // issue if SX tokens
+    if ( contract == "token.sx"_n ) issue( out, "issue" );
+
+    // transfer amount to sender
+    transfer( get_self(), from, out, "nav" );
+
+    // retire if SX token
+    if ( contract == "token.sx"_n ) retire( { quantity, contract }, "retire" );
+}
+
+[[eosio::action]]
+void sx::nav::setsettings( const std::optional<sx::nav::settings_row> settings )
+{
+    require_auth( get_self() );
+    sx::nav::settings _settings( get_self(), get_self().value );
+
+    // clear table if setting is `null`
+    if ( !settings ) return _settings.remove();
+
+    _settings.set( *settings, get_self() );
+}
+
+[[eosio::action]]
+void sx::nav::setpair( const extended_symbol base, const std::optional<extended_symbol> quote )
+{
+    require_auth( get_self() );
+    check( base.get_symbol().precision() == quote->get_symbol().precision(), "base & quote symbol precision must match");
+
+    sx::nav::pairs _pairs( get_self(), get_self().value );
+    auto itr = _pairs.find( base.get_symbol().code().raw() );
+
+    // create
+    if ( itr == _pairs.end() ) {
+        _pairs.emplace( get_self(), [&]( auto& row ) {
+            row.base = base;
+            row.quote = *quote;
+        });
+    // erase
+    } else if (!quote) {
+        _pairs.erase( itr );
+    // modify
     } else {
-        const extended_asset out = { quantity.amount, base };
-        issue( out, "issue" );
-        transfer( get_self(), from, out, "nav" );
+        _pairs.modify( itr, get_self(), [&]( auto& row ) {
+            row.base = base;
+            row.quote = *quote;
+        });
     }
 }
 
@@ -45,12 +86,10 @@ void sx::nav::issue( const extended_asset value, const string memo )
 {
     eosio::token::issue_action issue( value.contract, { value.contract, "active"_n });
     issue.send( value.contract, value.quantity, memo );
-    transfer( value.contract, get_self(), value, memo );
 }
 
 void sx::nav::retire( const extended_asset value, const string memo )
 {
-    transfer( get_self(), value.contract, value, memo );
     eosio::token::retire_action retire( value.contract, { value.contract, "active"_n });
     retire.send( value.quantity, memo );
 }
