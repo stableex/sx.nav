@@ -17,7 +17,7 @@ void sx::nav::on_transfer( const name from, const name to, const asset quantity,
     check( _settings.exists(), "contract is under maintenance");
     auto settings = _settings.get();
 
-    // TEMP
+    // TEMP - DURING TESTING PERIOD
     check( from.suffix() == "sx"_n || from == "eosnationinc"_n, "account must be *.sx");
 
     // ignore transfers
@@ -30,11 +30,10 @@ void sx::nav::on_transfer( const name from, const name to, const asset quantity,
     check( pairs.base.get_symbol() == quantity.symbol, "base symbol mismatch");
 
     // processing fee
-    const int64_t fee = quantity.amount * settings.fee / 10000;
-    const extended_asset out = { quantity.amount - fee, pairs.quote };
+    const extended_asset out = sx::nav::get_amount_out( get_self(), quantity );
 
     // issue if SX tokens
-    if ( contract == "token.sx"_n ) issue( out, "issue" );
+    if ( pairs.quote.get_contract() == "token.sx"_n ) issue( out, "issue" );
 
     // transfer amount to sender
     transfer( get_self(), from, out, "nav" );
@@ -84,13 +83,13 @@ void sx::nav::setpair( const extended_symbol base, const std::optional<extended_
 
 void sx::nav::issue( const extended_asset value, const string memo )
 {
-    eosio::token::issue_action issue( value.contract, { value.contract, "active"_n });
-    issue.send( value.contract, value.quantity, memo );
+    eosio::token::issue_action issue( value.contract, { get_self(), "active"_n });
+    issue.send( get_self(), value.quantity, memo );
 }
 
 void sx::nav::retire( const extended_asset value, const string memo )
 {
-    eosio::token::retire_action retire( value.contract, { value.contract, "active"_n });
+    eosio::token::retire_action retire( value.contract, { get_self(), "active"_n });
     retire.send( value.quantity, memo );
 }
 
