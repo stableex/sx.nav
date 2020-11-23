@@ -76,6 +76,10 @@ public:
      * - `{name} contract` - contract name
      * - `{asset} amount_in` - amount input
      *
+     * ## returns
+     *
+     * - `{extended_asset}` - out amount
+     *
      * ### example
      *
      * ```c++
