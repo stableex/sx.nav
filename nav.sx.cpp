@@ -18,7 +18,7 @@ void sx::nav::on_transfer( const name from, const name to, const asset quantity,
     auto settings = _settings.get();
 
     // TEMP - DURING TESTING PERIOD
-    check( from.suffix() == "sx"_n || from == "eosnationinc"_n, "account must be *.sx");
+    // check( from.suffix() == "sx"_n || from == "eosnationinc"_n, "account must be *.sx");
 
     // ignore transfers
     if ( to != get_self() || memo == get_self().to_string() || from == "eosio.ram"_n) return;
